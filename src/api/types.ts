@@ -54,7 +54,9 @@ export type CreateMovieRequest = {
 
 export type CinemaShowtime = {
   id: number
-  showtime: string // RFC 3339 timestamp
+  showtime: string // cinema wall-clock time, labelled "Z"
+  starts_at: string // real instant, cinema time zone applied by the backend
+  bookable: boolean // false from 15 minutes after the start
 }
 
 export type MovieShowtimes = {
@@ -64,7 +66,9 @@ export type MovieShowtimes = {
 
 export type MovieWithShowtimes = {
   movie: Movie
-  showtimes: MovieShowtimes[]
+  // null (not []) when the movie has no showtimes; entries are grouped by
+  // cinema but times within a cinema are not sorted.
+  showtimes: MovieShowtimes[] | null
 }
 
 // --- showtime ---
@@ -98,6 +102,12 @@ export type Cinema = {
 
 // --- booking ---
 
+// GET /showtime/:id/booked-seats
+export type BookedSeat = {
+  line: string
+  number: string
+}
+
 // model.CinemaSeat has no json tags; Go decodes keys case-insensitively, but
 // PascalCase matches what the backend stores and echoes.
 export type BookingSeat = {
@@ -117,6 +127,12 @@ export type Booking = {
   cinema_id: number
   showtime: CinemaShowtime
   seats: CinemaSeatRow[]
+  status: 'confirmed' | 'cancelled' | 'expired'
+  created_at: string // RFC 3339, a real UTC instant (unlike showtimes)
+  // Computed by the backend in the cinema's time zone (RFC 3339 with offset).
+  starts_at: string
+  cancel_deadline: string
+  can_cancel: boolean // false from 2 hours before the showtime
 }
 
 // POST /booking/ responds with { status, message: GetBookingResponse }.
